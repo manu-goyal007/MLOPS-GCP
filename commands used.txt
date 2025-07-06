@@ -1,0 +1,15 @@
+in bash for docker build
+
+docker build -t my-ml-pipeline-image .
+
+result -->> => exporting to image                                                                                                                                                                     11.2s
+ => => exporting layers                                                                                                                                                                    11.2s
+ => => writing image sha256:eab7a1854b0530bfe288df65b9a2b9f1b78c7e6b7814ed889d4b91fabee6e0a3                                                                                                0.0s
+ => => naming to docker.io/library/my-ml-pipeline-image  
+
+# Tag your image
+docker tag my-ml-pipeline-image us-east1-docker.pkg.dev/651302270690/cohort5/my-ml-pipeline-image:manu
+
+# Push
+docker push us-east1-docker.pkg.dev/651302270690/cohort5/my-ml-pipeline-image:manu
+-->>> denied: Permission "artifactregistry.repositories.uploadArtifacts" denied on resource "projects/651302270690/locations/us-east1/repositories/cohort5" (or it may not exist)

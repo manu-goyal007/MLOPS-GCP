@@ -1,0 +1,608 @@
+{
+  "components": {
+    "comp-compare-models": {
+      "executorLabel": "exec-compare-models",
+      "inputDefinitions": {
+        "parameters": {
+          "lr_accuracy": {
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "xgb_accuracy": {
+            "parameterType": "NUMBER_DOUBLE"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "Output": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-deploy-best-model": {
+      "executorLabel": "exec-deploy-best-model",
+      "inputDefinitions": {
+        "artifacts": {
+          "lr_model_path": {
+            "artifactType": {
+              "schemaTitle": "system.Model",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "xgb_model_path": {
+            "artifactType": {
+              "schemaTitle": "system.Model",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        },
+        "parameters": {
+          "best_model": {
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "endpoint_url": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-evaluate-model": {
+      "executorLabel": "exec-evaluate-model",
+      "inputDefinitions": {
+        "artifacts": {
+          "model": {
+            "artifactType": {
+              "schemaTitle": "system.Model",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "test_data": {
+            "artifactType": {
+              "schemaTitle": "system.Dataset",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "accuracy": {
+            "parameterType": "NUMBER_DOUBLE"
+          }
+        }
+      }
+    },
+    "comp-evaluate-model-noscale": {
+      "executorLabel": "exec-evaluate-model-noscale",
+      "inputDefinitions": {
+        "artifacts": {
+          "model": {
+            "artifactType": {
+              "schemaTitle": "system.Model",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "test_data": {
+            "artifactType": {
+              "schemaTitle": "system.Dataset",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "accuracy": {
+            "parameterType": "NUMBER_DOUBLE"
+          }
+        }
+      }
+    },
+    "comp-load-data": {
+      "executorLabel": "exec-load-data",
+      "inputDefinitions": {
+        "parameters": {
+          "gcs_path": {
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "input_data": {
+            "artifactType": {
+              "schemaTitle": "system.Dataset",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      }
+    },
+    "comp-random-forest-model": {
+      "executorLabel": "exec-random-forest-model",
+      "inputDefinitions": {
+        "artifacts": {
+          "train_data": {
+            "artifactType": {
+              "schemaTitle": "system.Dataset",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "model": {
+            "artifactType": {
+              "schemaTitle": "system.Model",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      }
+    },
+    "comp-train-test-split": {
+      "executorLabel": "exec-train-test-split",
+      "inputDefinitions": {
+        "artifacts": {
+          "input_data": {
+            "artifactType": {
+              "schemaTitle": "system.Dataset",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "test_data": {
+            "artifactType": {
+              "schemaTitle": "system.Dataset",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "train_data": {
+            "artifactType": {
+              "schemaTitle": "system.Dataset",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      }
+    },
+    "comp-xg-boost-model": {
+      "executorLabel": "exec-xg-boost-model",
+      "inputDefinitions": {
+        "artifacts": {
+          "train_data": {
+            "artifactType": {
+              "schemaTitle": "system.Dataset",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "model_xgb": {
+            "artifactType": {
+              "schemaTitle": "system.Model",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      }
+    }
+  },
+  "defaultPipelineRoot": "gs://cohort5_mlopstraining/pipeline-root",
+  "deploymentSpec": {
+    "executors": {
+      "exec-compare-models": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "compare_models"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef compare_models(\n    lr_accuracy: float,\n    xgb_accuracy: float\n) -> str:\n    best_model = \"rf_model\" if lr_accuracy >= xgb_accuracy else \"xgb_model\"\n    print(f\"Best model is: {best_model}\")\n    return best_model\n\n"
+          ],
+          "image": "python:3.9"
+        }
+      },
+      "exec-deploy-best-model": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "deploy_best_model"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp' 'google-cloud-aiplatform' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef deploy_best_model(\n    best_model: str,\n    lr_model_path: Input[Model],\n    xgb_model_path: Input[Model]\n)-> NamedTuple(\"DeployOutput\", [(\"endpoint_url\", str)]):\n    from google.cloud import aiplatform\n    from collections import namedtuple\n    # aiplatform.init(project=PROJECT_ID, location=REGION)\n\n    model_path = lr_model_path.path if best_model == \"rf_model\" else xgb_model_path.path\n\n    model = aiplatform.Model.upload(\n        display_name=f\"{best_model}-diabetes-model\",\n        artifact_uri=lr_model_path.path,\n        serving_container_image_uri=\"us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.1-0:latest\"\n    )\n    model.wait()\n    endpoint = aiplatform.Endpoint.create(display_name=f\"{best_model}-endpoint\")\n\n    endpoint_url = f\"https://console.cloud.google.com/vertex-ai/locations/us-east1/endpoints/{endpoint.name.split('/')[-1]}?project=egqrcxl-acn-mlops-train-s-c\"\n    model.deploy(endpoint=endpoint,\n    machine_type=\"n1-standard-16\",  \n    traffic_split={\"0\": 100},\n    traffic_percentage=100)\n\n    # endpoint_url = f\"https://console.cloud.google.com/vertex-ai/locations/{REGION}/endpoints/{endpoint.name.split('/')[-1]}?project={PROJECT_ID}\"\n\n\n    print(f\"Deployed to: {endpoint_url}\")\n    output = namedtuple(\"DeployOutput\", [\"endpoint_url\"])\n    return output(endpoint_url)\n\n"
+          ],
+          "image": "python:3.10"
+        }
+      },
+      "exec-evaluate-model": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "evaluate_model"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&  python3 -m pip install --quiet --no-warn-script-location 'pandas' 'scikit-learn' 'joblib' 'fsspec' 'gcsfs' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef evaluate_model(test_data: Input[Dataset], model: Input[Model]) -> NamedTuple(\"EvaluationOutput\", [(\"accuracy\", float)]):\n    import pandas as pd\n    import joblib\n    from sklearn.metrics import accuracy_score\n    from collections import namedtuple\n\n    df = pd.read_csv(test_data.path)\n    X = df.drop(\"Outcome\", axis=1)\n    # X = preprocess(X)\n    y = df[\"Outcome\"]\n\n    model_clf = joblib.load(model.path + \"/model.joblib\")\n    # model_clf = saved[\"model\"]\n    # scaler = saved[\"scaler\"]\n    # X = scaler.transform(X)\n    preds = model_clf.predict(X)\n    acc = accuracy_score(y, preds)\n\n    output = namedtuple(\"EvaluationOutput\", [\"accuracy\"])\n    print(\"Model Accuracy:\", acc)\n    return output(acc)\n\n"
+          ],
+          "image": "python:3.10"
+        }
+      },
+      "exec-evaluate-model-noscale": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "evaluate_model_noscale"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&  python3 -m pip install --quiet --no-warn-script-location 'pandas' 'scikit-learn' 'xgboost' 'joblib' 'fsspec' 'gcsfs' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef evaluate_model_noscale(test_data: Input[Dataset], model: Input[Model]) -> NamedTuple(\"EvaluationOutput\", [(\"accuracy\", float)]):\n    import pandas as pd\n    import joblib\n    from sklearn.metrics import accuracy_score\n    from collections import namedtuple\n\n    df = pd.read_csv(test_data.path)\n    X = df.drop(\"Outcome\", axis=1)\n    # X = preprocess(X)\n    y = df[\"Outcome\"]\n\n    model_clf = joblib.load(model.path + \"/model.joblib\")\n    # model_clf = saved[\"model\"]\n    # scaler = saved[\"scaler\"]\n    # X = scaler.transform(X)\n    preds = model_clf.predict(X)\n    acc = accuracy_score(y, preds)\n\n    output = namedtuple(\"EvaluationOutput\", [\"accuracy\"])\n    print(\"Model Accuracy:\", acc)\n    return output(acc)\n\n"
+          ],
+          "image": "python:3.10"
+        }
+      },
+      "exec-load-data": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "load_data"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&  python3 -m pip install --quiet --no-warn-script-location 'pandas' 'fsspec' 'gcsfs' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef load_data(gcs_path: str, input_data: Output[Dataset]):\n    import pandas as pd\n\n    df=pd.read_csv(gcs_path)\n\n    df.to_csv(input_data.path, index=False)\n    # df.to_csv(df.path, index=False)\n\n"
+          ],
+          "image": "python:3.10"
+        }
+      },
+      "exec-random-forest-model": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "random_forest_model"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&  python3 -m pip install --quiet --no-warn-script-location 'pandas' 'scikit-learn' 'joblib' 'fsspec' 'gcsfs' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef random_forest_model(train_data: Input[Dataset], model: Output[Model]):\n    import pandas as pd\n    import joblib\n    import os\n    from sklearn.ensemble import RandomForestClassifier\n    from sklearn.preprocessing import StandardScaler\n\n    df = pd.read_csv(train_data.path)\n    X = df.drop(\"Outcome\", axis=1)\n    # scaler=StandardScaler()\n    # X = scaler.fit_transform(X)\n\n\n\n    y = df[\"Outcome\"]\n\n    model_clf = RandomForestClassifier()\n    model_clf.fit(X, y)\n\n    os.makedirs(model.path, exist_ok=True)\n    # \"scaler\": scaler\n    joblib.dump( model_clf, f\"{model.path}/model.joblib\")\n\n"
+          ],
+          "image": "python:3.10"
+        }
+      },
+      "exec-train-test-split": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "train_test_split"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&  python3 -m pip install --quiet --no-warn-script-location 'pandas' 'scikit-learn' 'joblib' 'fsspec' 'gcsfs' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef train_test_split(input_data: Input[Dataset], train_data: Output[Dataset], test_data: Output[Dataset]):\n    import pandas as pd\n    from sklearn.model_selection import train_test_split\n\n    df = pd.read_csv(input_data.path)\n    df = df.fillna(df.mean(numeric_only=True))\n\n\n    train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)\n\n    train_df.to_csv(train_data.path, index=False)\n    test_df.to_csv(test_data.path, index=False)\n\n"
+          ],
+          "image": "python:3.10"
+        }
+      },
+      "exec-xg-boost-model": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "xg_boost_model"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&  python3 -m pip install --quiet --no-warn-script-location 'pandas' 'scikit-learn' 'xgboost' 'joblib' 'fsspec' 'gcsfs' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef xg_boost_model(train_data: Input[Dataset], model_xgb: Output[Model]):\n\n    import pandas as pd\n    import joblib\n    import os\n    import xgboost as xgb\n\n    df=pd.read_csv(train_data.path)\n    X=df.drop(\"Outcome\", axis=1)\n    y=df[\"Outcome\"]\n\n    model_clf=xgb.XGBClassifier()\n    model_clf.fit(X,y)\n\n    os.makedirs(model_xgb.path, exist_ok=True)\n    joblib.dump( model_clf, f\"{model_xgb.path}/model.joblib\")\n\n"
+          ],
+          "image": "python:3.10"
+        }
+      }
+    }
+  },
+  "pipelineInfo": {
+    "name": "cohort5-diabetes-pipeline-mg"
+  },
+  "root": {
+    "dag": {
+      "tasks": {
+        "compare-models": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-compare-models"
+          },
+          "dependentTasks": [
+            "evaluate-model",
+            "evaluate-model-noscale"
+          ],
+          "inputs": {
+            "parameters": {
+              "lr_accuracy": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "accuracy",
+                  "producerTask": "evaluate-model"
+                }
+              },
+              "xgb_accuracy": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "accuracy",
+                  "producerTask": "evaluate-model-noscale"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "compare-models"
+          }
+        },
+        "deploy-best-model": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-deploy-best-model"
+          },
+          "dependentTasks": [
+            "compare-models",
+            "random-forest-model",
+            "xg-boost-model"
+          ],
+          "inputs": {
+            "artifacts": {
+              "lr_model_path": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "model",
+                  "producerTask": "random-forest-model"
+                }
+              },
+              "xgb_model_path": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "model_xgb",
+                  "producerTask": "xg-boost-model"
+                }
+              }
+            },
+            "parameters": {
+              "best_model": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "Output",
+                  "producerTask": "compare-models"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "deploy-best-model"
+          }
+        },
+        "evaluate-model": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-evaluate-model"
+          },
+          "dependentTasks": [
+            "random-forest-model",
+            "train-test-split"
+          ],
+          "inputs": {
+            "artifacts": {
+              "model": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "model",
+                  "producerTask": "random-forest-model"
+                }
+              },
+              "test_data": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "test_data",
+                  "producerTask": "train-test-split"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "evaluate-model"
+          }
+        },
+        "evaluate-model-noscale": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-evaluate-model-noscale"
+          },
+          "dependentTasks": [
+            "train-test-split",
+            "xg-boost-model"
+          ],
+          "inputs": {
+            "artifacts": {
+              "model": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "model_xgb",
+                  "producerTask": "xg-boost-model"
+                }
+              },
+              "test_data": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "test_data",
+                  "producerTask": "train-test-split"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "evaluate-model-noscale"
+          }
+        },
+        "load-data": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-load-data"
+          },
+          "inputs": {
+            "parameters": {
+              "gcs_path": {
+                "componentInputParameter": "gcs_path"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "load-data"
+          }
+        },
+        "random-forest-model": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-random-forest-model"
+          },
+          "dependentTasks": [
+            "train-test-split"
+          ],
+          "inputs": {
+            "artifacts": {
+              "train_data": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "train_data",
+                  "producerTask": "train-test-split"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "random-forest-model"
+          }
+        },
+        "train-test-split": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-train-test-split"
+          },
+          "dependentTasks": [
+            "load-data"
+          ],
+          "inputs": {
+            "artifacts": {
+              "input_data": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "input_data",
+                  "producerTask": "load-data"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "train-test-split"
+          }
+        },
+        "xg-boost-model": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-xg-boost-model"
+          },
+          "dependentTasks": [
+            "train-test-split"
+          ],
+          "inputs": {
+            "artifacts": {
+              "train_data": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "train_data",
+                  "producerTask": "train-test-split"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "xg-boost-model"
+          }
+        }
+      }
+    },
+    "inputDefinitions": {
+      "parameters": {
+        "gcs_path": {
+          "parameterType": "STRING"
+        }
+      }
+    }
+  },
+  "schemaVersion": "2.1.0",
+  "sdkVersion": "kfp-2.13.0"
+}

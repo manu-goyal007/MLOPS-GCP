@@ -1,0 +1,16 @@
+kfp==2.13.0
+click>=8.0.0,<9.0.0
+google-cloud-aiplatform>=1.38.0,<2.0.0
+google-cloud-storage>=2.10.0,<3.0.0
+google-auth>=2.6.0,<3.0.0
+protobuf<5.0.0
+typing-extensions>=4.5.0,<5.0.0
+pyyaml>=5.3,<7.0
+requests>=2.20.0,<3.0
+kubernetes>=12.0.0,<27.0.0
+fire>=0.4.0
+setuptools>=65.0.0
+pandas
+scikit-learn
+joblib
+fsspec
