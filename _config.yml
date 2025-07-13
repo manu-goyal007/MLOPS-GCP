@@ -1,0 +1,13 @@
+title: MLOps in GCP – Manu Goyal
+logo: assets/gcp-mlops-arch.png  # Save your architecture image in `assets/` folder
+description: >-
+  Production-grade MLOps pipeline on Google Cloud Platform using Vertex AI, Cloud Functions, CI/CD and model monitoring.
+
+theme: jekyll-theme-cayman  # Looks cleaner and more modern for tech projects
+
+show_downloads: false
+
+plugins:
+  - jekyll-seo-tag
+
+email: goyalm685@gmail.com
